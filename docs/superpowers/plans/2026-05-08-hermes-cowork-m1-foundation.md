@@ -326,7 +326,7 @@ mkdir -p apps/desktop/tests/{unit,e2e}
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "lint": "eslint src --ext .ts,.tsx",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json"
   },
   "hermes": { "minVersion": "0.13.0" },
   "dependencies": {
@@ -363,12 +363,22 @@ mkdir -p apps/desktop/tests/{unit,e2e}
 
 - [ ] **Step 3: Install**
 
-Run: `pnpm install`
-Expected: deps install, no errors.
+pnpm 10 ignores postinstall scripts by default (security hardening), but `electron` and `esbuild` need their postinstalls to download platform binaries. Approve them in the workspace root `package.json` by adding:
 
-- [ ] **Step 4: Write `apps/desktop/tsconfig.json`**
+```json
+"pnpm": {
+  "onlyBuiltDependencies": ["electron", "esbuild"]
+}
+```
 
-This is the renderer-side config (React 19 + JSX). It deliberately relaxes `exactOptionalPropertyTypes` because React 19 component prop types use `prop?: Type` heavily, and `<input value={maybeUndefined}/>` patterns error under that flag. The base config keeps the flag on, so main/preload still get the stricter check via `tsconfig.node.json`.
+Then run: `pnpm install`
+Expected: deps install, postinstall scripts run for `electron` and `esbuild`, no errors.
+
+- [ ] **Step 4: Write `apps/desktop/tsconfig.json`** — renderer-side config
+
+This is the renderer config (React 19 + JSX). It relaxes `exactOptionalPropertyTypes` because React 19 component prop types use `prop?: Type` heavily, and `<input value={maybeUndefined}/>` patterns error under that flag. The base config keeps the flag on, so main/preload still get the stricter check via `tsconfig.node.json`.
+
+The renderer config and the node config are **sibling configs**, not parent/child via `references` — that pattern requires `composite: true` plus restricted includes and adds build-mode complexity we don't need. Run them as two separate `tsc --noEmit` passes (see Step 2's `typecheck` script).
 
 ```json
 {
@@ -382,12 +392,11 @@ This is the renderer-side config (React 19 + JSX). It deliberately relaxes `exac
     },
     "exactOptionalPropertyTypes": false
   },
-  "include": ["src/**/*"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "include": ["src/renderer/**/*", "src/shared/**/*"]
 }
 ```
 
-- [ ] **Step 5: Write `apps/desktop/tsconfig.node.json`**
+- [ ] **Step 5: Write `apps/desktop/tsconfig.node.json`** — main + preload config
 
 ```json
 {
@@ -397,7 +406,7 @@ This is the renderer-side config (React 19 + JSX). It deliberately relaxes `exac
     "moduleResolution": "Bundler",
     "types": ["node"]
   },
-  "include": ["electron.vite.config.ts", "src/main/**/*", "src/preload/**/*"]
+  "include": ["electron.vite.config.ts", "src/main/**/*", "src/preload/**/*", "src/shared/**/*"]
 }
 ```
 
