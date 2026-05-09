@@ -1,0 +1,7 @@
+Hermes Cowork desktop icon — placeholder.
+
+Replace with:
+- 1024×1024 PNG converted to .icns via `iconutil` (Apple) or `electron-icon-builder`.
+- 540×380 PNG for DMG background (build/dmg-background.png).
+
+Then uncomment the `mac.icon` and `dmg.background` lines in apps/desktop/electron-builder.yml.

@@ -1,0 +1,31 @@
+appId: com.hermescowork.desktop
+productName: Hermes Cowork
+artifactName: ${productName}-${version}-${arch}.${ext}
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - out/**/*
+  - "!node_modules/**/*"
+
+mac:
+  category: public.app-category.developer-tools
+  # icon: build/icon.icns  # TODO: add real icon — see build/ICON_TODO.txt
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  notarize: false  # set true once Apple Developer cert is configured
+  target:
+    - target: dmg
+      arch: [arm64]
+
+dmg:
+  # background: build/dmg-background.png  # TODO: add DMG background
+  iconSize: 96
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
