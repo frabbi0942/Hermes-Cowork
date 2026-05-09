@@ -1,4 +1,6 @@
 // apps/desktop/src/main/orchestrator/dashboard.ts
+import { spawn } from 'node:child_process';
+import { setTimeout as sleep } from 'node:timers/promises';
 
 export type DashboardState =
   | { kind: 'unknown' }
@@ -12,6 +14,8 @@ export type DashboardOptions = {
   port?: number;
 };
 
+const DEFAULT_PORT = 9119;
+
 export async function probeDashboard(port: number): Promise<boolean> {
   try {
     const ctrl = new AbortController();
@@ -24,4 +28,37 @@ export async function probeDashboard(port: number): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+export async function ensureDashboard(opts: DashboardOptions): Promise<DashboardState> {
+  const port = opts.port ?? DEFAULT_PORT;
+
+  if (await probeDashboard(port)) {
+    return { kind: 'ready', port, pid: null };
+  }
+
+  const child = spawn(
+    opts.binaryPath,
+    ['dashboard', '--no-open', '--port', String(port), '--host', '127.0.0.1'],
+    {
+      env: { ...process.env, HERMES_HOME: opts.hermesHome },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    },
+  );
+
+  child.on('error', (err) => {
+    console.error('[dashboard] spawn error', err);
+  });
+
+  // Wait until /api/status responds, with a 20s ceiling.
+  const deadline = Date.now() + 20_000;
+  while (Date.now() < deadline) {
+    if (await probeDashboard(port)) {
+      return { kind: 'ready', port, pid: child.pid ?? null };
+    }
+    await sleep(400);
+  }
+
+  child.kill('SIGTERM');
+  return { kind: 'crashed', lastError: 'dashboard did not become ready in 20s' };
 }
