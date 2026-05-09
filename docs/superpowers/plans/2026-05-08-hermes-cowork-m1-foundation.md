@@ -124,7 +124,7 @@ Hermes-Cowork/
 - [ ] **Step 1: Verify pnpm is installed**
 
 Run: `pnpm --version`
-Expected: a version number (>= 9.0.0). If missing: `npm install -g pnpm@latest`.
+Expected: a version number (>= 10.0.0). If missing: `npm install -g pnpm@latest`.
 
 - [ ] **Step 2: Write root `package.json`**
 
@@ -143,7 +143,7 @@ Expected: a version number (>= 9.0.0). If missing: `npm install -g pnpm@latest`.
     "typecheck": "pnpm -r typecheck"
   },
   "engines": { "node": ">=20.0.0" },
-  "packageManager": "pnpm@9.12.0"
+  "packageManager": "pnpm@10.33.2"
 }
 ```
 
