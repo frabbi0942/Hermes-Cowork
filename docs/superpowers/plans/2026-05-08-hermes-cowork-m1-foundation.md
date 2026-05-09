@@ -368,6 +368,8 @@ Expected: deps install, no errors.
 
 - [ ] **Step 4: Write `apps/desktop/tsconfig.json`**
 
+This is the renderer-side config (React 19 + JSX). It deliberately relaxes `exactOptionalPropertyTypes` because React 19 component prop types use `prop?: Type` heavily, and `<input value={maybeUndefined}/>` patterns error under that flag. The base config keeps the flag on, so main/preload still get the stricter check via `tsconfig.node.json`.
+
 ```json
 {
   "extends": "../../tsconfig.base.json",
@@ -377,7 +379,8 @@ Expected: deps install, no errors.
       "@main/*": ["main/*"],
       "@renderer/*": ["renderer/*"],
       "@shared/*": ["shared/*"]
-    }
+    },
+    "exactOptionalPropertyTypes": false
   },
   "include": ["src/**/*"],
   "references": [{ "path": "./tsconfig.node.json" }]
@@ -495,6 +498,8 @@ app.on('activate', () => {
 ```
 
 - [ ] **Step 9: Write `apps/desktop/src/preload/index.ts` (placeholder)**
+
+The preload runs with `sandbox: false` (see Step 8's webPreferences), so an ESM-style preload bundles cleanly via electron-vite. If we ever flip to `sandbox: true`, the preload's tsconfig may need `verbatimModuleSyntax: false` so the bundler can emit CJS — defer that decision until/unless it bites.
 
 ```ts
 import { contextBridge } from 'electron';
