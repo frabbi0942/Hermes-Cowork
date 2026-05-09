@@ -1,1 +1,19 @@
 .superpowers/
+
+# Node
+node_modules/
+*.log
+
+# Build
+dist/
+out/
+release/
+*.tsbuildinfo
+
+# Editors
+.vscode/
+.idea/
+.DS_Store
+
+# Electron
+.electron-cache/

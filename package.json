@@ -1,0 +1,16 @@
+{
+  "name": "hermes-cowork",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Open-source desktop app — Claude-Cowork-style UX powered by Hermes Agent",
+  "license": "MIT",
+  "scripts": {
+    "dev": "pnpm --filter @hermes-cowork/desktop dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "engines": { "node": ">=20.0.0" },
+  "packageManager": "pnpm@10.33.2"
+}
