@@ -20,3 +20,9 @@ export type AcpServerMessage =
   | { kind: 'tool-result'; sessionId: string; toolCallId: string; result: unknown }
   | { kind: 'approval-request'; sessionId: string; toolCallId: string; description: string }
   | { kind: 'done'; sessionId: string };
+
+declare global {
+  interface Window {
+    hermes: import('../preload').HermesApi;
+  }
+}
