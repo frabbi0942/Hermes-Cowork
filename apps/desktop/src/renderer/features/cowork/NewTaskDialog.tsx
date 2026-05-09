@@ -20,8 +20,8 @@ export function NewTaskDialog() {
   const startTask = useCoworkStore((s) => s.startTask);
 
   const pickFolder = async () => {
-    // Renderer can't open native dialog directly under contextIsolation;
-    // M1 placeholder: paste an absolute path. Native dialog wired in Task 26.
+    const path = await window.hermes.dialog.pickFolder();
+    if (path) setCwd(path);
   };
 
   const submit = async () => {

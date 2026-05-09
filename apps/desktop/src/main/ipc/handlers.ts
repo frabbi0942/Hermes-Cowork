@@ -1,5 +1,5 @@
 // apps/desktop/src/main/ipc/handlers.ts
-import { ipcMain, BrowserWindow } from 'electron';
+import { ipcMain, BrowserWindow, dialog } from 'electron';
 import { randomUUID } from 'node:crypto';
 import { IpcChannel } from './channels';
 import { AcpSupervisor, type AcpEvent } from '../orchestrator/acp-supervisor';
@@ -108,5 +108,13 @@ export function registerIpcHandlers(ctx: Context, sup: AcpSupervisor): void {
     });
     if (!r.ok) throw new Error(`PATCH ${path}: ${r.status}`);
     return r.json().catch(() => null);
+  });
+
+  // ── dialog ──
+  ipcMain.handle(IpcChannel.ShowFolderPicker, async () => {
+    const w = ctx.win();
+    if (!w) return null;
+    const result = await dialog.showOpenDialog(w, { properties: ['openDirectory'] });
+    return result.canceled ? null : (result.filePaths[0] ?? null);
   });
 }

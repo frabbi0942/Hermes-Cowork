@@ -21,6 +21,9 @@ export const IpcChannel = {
   // kanban WebSocket pump
   KanbanWsSubscribe: 'kanban-ws:subscribe',
   KanbanWsEvent: 'kanban-ws:event',
+
+  // dialog
+  ShowFolderPicker: 'dialog:folder',
 } as const;
 
 export type IpcChannelKey = (typeof IpcChannel)[keyof typeof IpcChannel];

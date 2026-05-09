@@ -37,6 +37,9 @@ const api = {
       return () => ipcRenderer.removeListener(IpcChannel.KanbanWsEvent, listener);
     },
   },
+  dialog: {
+    pickFolder: (): Promise<string | null> => ipcRenderer.invoke(IpcChannel.ShowFolderPicker),
+  },
 };
 
 contextBridge.exposeInMainWorld('hermes', api);
