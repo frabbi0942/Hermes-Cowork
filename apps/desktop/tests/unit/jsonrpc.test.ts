@@ -3,42 +3,41 @@ import { describe, it, expect } from 'vitest';
 import { encodeFrame, FrameDecoder } from '@main/orchestrator/jsonrpc';
 
 describe('encodeFrame', () => {
-  it('produces Content-Length-prefixed JSON', () => {
+  it('produces newline-terminated JSON (NDJSON)', () => {
     const frame = encodeFrame({ jsonrpc: '2.0', id: 1, method: 'ping' });
-    const expectedJson = '{"jsonrpc":"2.0","id":1,"method":"ping"}';
-    expect(frame.toString('utf8')).toBe(
-      `Content-Length: ${Buffer.byteLength(expectedJson, 'utf8')}\r\n\r\n${expectedJson}`,
-    );
+    expect(frame.toString('utf8')).toBe('{"jsonrpc":"2.0","id":1,"method":"ping"}\n');
   });
 });
 
 describe('FrameDecoder', () => {
-  it('decodes a single full frame', () => {
+  it('decodes a single full line', () => {
     const dec = new FrameDecoder();
-    const json = '{"jsonrpc":"2.0","id":1,"result":"pong"}';
-    const buf = Buffer.from(`Content-Length: ${json.length}\r\n\r\n${json}`);
-    const messages = dec.push(buf);
-    expect(messages).toEqual([{ jsonrpc: '2.0', id: 1, result: 'pong' }]);
-  });
-
-  it('handles split frames across pushes', () => {
-    const dec = new FrameDecoder();
-    const json = '{"jsonrpc":"2.0","id":1,"result":"pong"}';
-    const full = `Content-Length: ${json.length}\r\n\r\n${json}`;
-    expect(dec.push(Buffer.from(full.slice(0, 10)))).toEqual([]);
-    expect(dec.push(Buffer.from(full.slice(10)))).toEqual([
+    expect(dec.push(Buffer.from('{"jsonrpc":"2.0","id":1,"result":"pong"}\n'))).toEqual([
       { jsonrpc: '2.0', id: 1, result: 'pong' },
     ]);
   });
 
-  it('decodes multiple frames in one push', () => {
+  it('handles split lines across pushes', () => {
     const dec = new FrameDecoder();
-    const j1 = '{"id":1}';
-    const j2 = '{"id":2}';
-    const buf = Buffer.from(
-      `Content-Length: ${j1.length}\r\n\r\n${j1}` +
-      `Content-Length: ${j2.length}\r\n\r\n${j2}`,
-    );
-    expect(dec.push(buf)).toEqual([{ id: 1 }, { id: 2 }]);
+    expect(dec.push(Buffer.from('{"jsonrpc":"2.0",'))).toEqual([]);
+    expect(dec.push(Buffer.from('"id":1,"result":"pong"}\n'))).toEqual([
+      { jsonrpc: '2.0', id: 1, result: 'pong' },
+    ]);
+  });
+
+  it('decodes multiple lines in one push', () => {
+    const dec = new FrameDecoder();
+    expect(dec.push(Buffer.from('{"id":1}\n{"id":2}\n'))).toEqual([{ id: 1 }, { id: 2 }]);
+  });
+
+  it('skips blank lines and malformed lines without breaking the stream', () => {
+    const dec = new FrameDecoder();
+    expect(dec.push(Buffer.from('\nnot json\n{"id":3}\n'))).toEqual([{ id: 3 }]);
+  });
+
+  it('buffers a partial trailing line until newline arrives', () => {
+    const dec = new FrameDecoder();
+    expect(dec.push(Buffer.from('{"id":4}'))).toEqual([]);
+    expect(dec.push(Buffer.from('\n'))).toEqual([{ id: 4 }]);
   });
 });

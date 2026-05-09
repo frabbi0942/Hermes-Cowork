@@ -1,9 +1,9 @@
 // apps/desktop/src/main/ipc/handlers.ts
 import { ipcMain, BrowserWindow, dialog } from 'electron';
-import { randomUUID } from 'node:crypto';
 import { IpcChannel } from './channels';
-import { AcpSupervisor, type AcpEvent } from '../orchestrator/acp-supervisor';
-import type { ProfileSummary, StatusSnapshot, AcpClientMessage } from '../../shared/types';
+import { AcpSupervisor } from '../orchestrator/acp-supervisor';
+import { AcpBridge } from '../orchestrator/acp-bridge';
+import type { AcpServerMessage, ProfileSummary, StatusSnapshot, AcpClientMessage } from '../../shared/types';
 import { findHermesBinary, verifyHermesVersion, MIN_HERMES_VERSION } from '../orchestrator/hermes-runtime';
 
 type Context = {
@@ -47,6 +47,8 @@ export function registerIpcHandlers(ctx: Context, sup: AcpSupervisor): void {
     return (await r.json()) as ProfileSummary[];
   });
 
+  const bridge = new AcpBridge(sup);
+
   ipcMain.handle(IpcChannel.ProfileSwitch, async (_e, name: string): Promise<void> => {
     const r = await fetch(`http://127.0.0.1:${ctx.dashboardPort}/api/profiles/use`, {
       method: 'POST',
@@ -54,18 +56,16 @@ export function registerIpcHandlers(ctx: Context, sup: AcpSupervisor): void {
       body: JSON.stringify({ name }),
     });
     if (!r.ok) throw new Error(`profile switch failed: ${r.status}`);
-    sup.shutdownAll();
+    bridge.stopAll();
   });
 
   // ── ACP ──
-  sup.on('event', (event: AcpEvent) => {
-    ctx.win()?.webContents.send(IpcChannel.AcpEvent, event);
+  bridge.on('event', (semantic: AcpServerMessage) => {
+    ctx.win()?.webContents.send(IpcChannel.AcpEvent, semantic);
   });
 
   ipcMain.handle(IpcChannel.AcpStart, async (_e, opts: { profile: string; cwd: string }) => {
-    const sessionId = randomUUID();
-    sup.spawn({
-      id: sessionId,
+    return bridge.startSession({
       profile: opts.profile,
       cwd: opts.cwd,
       binaryPath: ctx.hermesBinary,
@@ -73,29 +73,18 @@ export function registerIpcHandlers(ctx: Context, sup: AcpSupervisor): void {
         ? ctx.defaultHermesHome
         : `${ctx.defaultHermesHome}/profiles/${opts.profile}`,
     });
-    return { sessionId };
   });
 
   ipcMain.handle(IpcChannel.AcpSend, async (_e, msg: AcpClientMessage) => {
     if (msg.kind === 'prompt') {
-      sup.send(msg.sessionId, {
-        jsonrpc: '2.0',
-        id: randomUUID(),
-        method: 'prompt',
-        params: { text: msg.text },
-      });
+      await bridge.sendPrompt(msg.sessionId, msg.text);
     } else {
-      sup.send(msg.sessionId, {
-        jsonrpc: '2.0',
-        id: randomUUID(),
-        method: 'tool/respond',
-        params: { tool_call_id: msg.toolCallId, allow: msg.allow },
-      });
+      bridge.respondToPermission(msg.toolCallId, msg.allow);
     }
   });
 
   ipcMain.handle(IpcChannel.AcpStop, async (_e, sessionId: string) => {
-    sup.shutdown(sessionId);
+    bridge.stopSession(sessionId);
   });
 
   // ── REST proxy ──

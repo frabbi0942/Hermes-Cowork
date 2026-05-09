@@ -78,6 +78,11 @@ export const useChatStore = create<ChatStore>((set) => ({
           };
         case 'done':
           return s;
+        default:
+          // Unknown kind: never replace state with undefined — that nukes the
+          // entire store because zustand's setState replaces (not merges) when
+          // the next state is non-object. See acp-translator on the main side.
+          return s;
       }
     }),
 }));

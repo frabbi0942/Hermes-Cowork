@@ -1,39 +1,35 @@
+// apps/desktop/src/main/orchestrator/jsonrpc.ts
+//
+// Newline-delimited JSON (NDJSON) framing for ACP stdio. Each message is one
+// line of JSON terminated by '\n'. ACP's reference Python client reads with
+// readline(); see acp/connection.py.
+
 export type JsonRpcMessage = Record<string, unknown>;
 
 export function encodeFrame(msg: JsonRpcMessage): Buffer {
-  const json = JSON.stringify(msg);
-  const len = Buffer.byteLength(json, 'utf8');
-  return Buffer.from(`Content-Length: ${len}\r\n\r\n${json}`, 'utf8');
+  return Buffer.from(JSON.stringify(msg) + '\n', 'utf8');
 }
 
 export class FrameDecoder {
-  private buf = Buffer.alloc(0);
+  private buf = '';
 
   push(chunk: Buffer): JsonRpcMessage[] {
-    this.buf = Buffer.concat([this.buf, chunk]);
+    this.buf += chunk.toString('utf8');
     const out: JsonRpcMessage[] = [];
 
-    // eslint-disable-next-line no-constant-condition
-    for (;;) {
-      const sep = this.buf.indexOf('\r\n\r\n');
-      if (sep === -1) break;
-      const header = this.buf.subarray(0, sep).toString('utf8');
-      const m = header.match(/Content-Length:\s*(\d+)/i);
-      if (!m) {
-        // header doesn't contain Content-Length — drop and resync
-        this.buf = this.buf.subarray(sep + 4);
-        continue;
+    let nl = this.buf.indexOf('\n');
+    while (nl !== -1) {
+      const line = this.buf.slice(0, nl).trim();
+      this.buf = this.buf.slice(nl + 1);
+      if (line) {
+        try {
+          out.push(JSON.parse(line) as JsonRpcMessage);
+        } catch {
+          // Skip malformed lines. ACP agents may emit non-JSON banners on
+          // stdout during startup — surviving them keeps the connection alive.
+        }
       }
-      const len = Number(m[1]);
-      const start = sep + 4;
-      if (this.buf.length < start + len) break;
-      const json = this.buf.subarray(start, start + len).toString('utf8');
-      try {
-        out.push(JSON.parse(json) as JsonRpcMessage);
-      } catch {
-        // skip malformed frame
-      }
-      this.buf = this.buf.subarray(start + len);
+      nl = this.buf.indexOf('\n');
     }
     return out;
   }
