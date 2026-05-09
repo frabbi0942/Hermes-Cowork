@@ -9,12 +9,16 @@ import { findHermesBinary, verifyHermesVersion, MIN_HERMES_VERSION } from '../or
 type Context = {
   hermesBinary: string;
   dashboardPort: number;
+  dashboardToken: string | null;
   defaultHermesHome: string;
   activeHermesHome: string;
   win: () => BrowserWindow | null;
 };
 
 export function registerIpcHandlers(ctx: Context, sup: AcpSupervisor): void {
+  const authHeader = (): Record<string, string> =>
+    ctx.dashboardToken ? { Authorization: `Bearer ${ctx.dashboardToken}` } : {};
+
   // ── runtime ──
   ipcMain.handle(IpcChannel.RuntimeProbe, async () => {
     const found = findHermesBinary();
@@ -27,7 +31,7 @@ export function registerIpcHandlers(ctx: Context, sup: AcpSupervisor): void {
   });
 
   ipcMain.handle(IpcChannel.RuntimeStatus, async (): Promise<StatusSnapshot> => {
-    const r = await fetch(`http://127.0.0.1:${ctx.dashboardPort}/api/status`);
+    const r = await fetch(`http://127.0.0.1:${ctx.dashboardPort}/api/status`, { headers: authHeader() });
     const body = (await r.json()) as { version: string; gateway?: { running?: boolean; platforms?: string[] } };
     return {
       hermesVersion: body.version,
@@ -38,7 +42,7 @@ export function registerIpcHandlers(ctx: Context, sup: AcpSupervisor): void {
 
   // ── profiles ──
   ipcMain.handle(IpcChannel.ProfileList, async (): Promise<ProfileSummary[]> => {
-    const r = await fetch(`http://127.0.0.1:${ctx.dashboardPort}/api/profiles`);
+    const r = await fetch(`http://127.0.0.1:${ctx.dashboardPort}/api/profiles`, { headers: authHeader() });
     if (!r.ok) throw new Error(`profiles fetch failed: ${r.status}`);
     return (await r.json()) as ProfileSummary[];
   });
@@ -46,7 +50,7 @@ export function registerIpcHandlers(ctx: Context, sup: AcpSupervisor): void {
   ipcMain.handle(IpcChannel.ProfileSwitch, async (_e, name: string): Promise<void> => {
     const r = await fetch(`http://127.0.0.1:${ctx.dashboardPort}/api/profiles/use`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...authHeader() },
       body: JSON.stringify({ name }),
     });
     if (!r.ok) throw new Error(`profile switch failed: ${r.status}`);
@@ -96,7 +100,7 @@ export function registerIpcHandlers(ctx: Context, sup: AcpSupervisor): void {
 
   // ── REST proxy ──
   ipcMain.handle(IpcChannel.RestGet, async (_e, path: string) => {
-    const r = await fetch(`http://127.0.0.1:${ctx.dashboardPort}${path}`);
+    const r = await fetch(`http://127.0.0.1:${ctx.dashboardPort}${path}`, { headers: authHeader() });
     if (!r.ok) throw new Error(`GET ${path}: ${r.status}`);
     return r.json();
   });
@@ -104,7 +108,7 @@ export function registerIpcHandlers(ctx: Context, sup: AcpSupervisor): void {
   ipcMain.handle(IpcChannel.RestPost, async (_e, path: string, body: unknown) => {
     const r = await fetch(`http://127.0.0.1:${ctx.dashboardPort}${path}`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...authHeader() },
       body: JSON.stringify(body),
     });
     if (!r.ok) throw new Error(`POST ${path}: ${r.status}`);
@@ -114,7 +118,7 @@ export function registerIpcHandlers(ctx: Context, sup: AcpSupervisor): void {
   ipcMain.handle(IpcChannel.RestPatch, async (_e, path: string, body: unknown) => {
     const r = await fetch(`http://127.0.0.1:${ctx.dashboardPort}${path}`, {
       method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...authHeader() },
       body: JSON.stringify(body),
     });
     if (!r.ok) throw new Error(`PATCH ${path}: ${r.status}`);

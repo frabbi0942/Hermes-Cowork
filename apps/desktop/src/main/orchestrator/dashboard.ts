@@ -16,6 +16,18 @@ export type DashboardOptions = {
 
 const DEFAULT_PORT = 9119;
 
+export async function fetchDashboardToken(port: number): Promise<string | null> {
+  try {
+    const r = await fetch(`http://127.0.0.1:${port}/`);
+    if (!r.ok) return null;
+    const html = await r.text();
+    const m = html.match(/window\.__HERMES_SESSION_TOKEN__="([^"]+)"/);
+    return m?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function probeDashboard(port: number): Promise<boolean> {
   try {
     const ctrl = new AbortController();

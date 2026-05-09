@@ -2,7 +2,7 @@ import { app, BrowserWindow, shell } from 'electron';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { findHermesBinary, verifyHermesVersion } from './orchestrator/hermes-runtime';
-import { ensureDashboard } from './orchestrator/dashboard';
+import { ensureDashboard, fetchDashboardToken } from './orchestrator/dashboard';
 import { AcpSupervisor } from './orchestrator/acp-supervisor';
 import { registerIpcHandlers } from './ipc/handlers';
 import { KanbanWsPump } from './orchestrator/kanban-ws';
@@ -45,6 +45,7 @@ void app.whenReady().then(async () => {
   const found = findHermesBinary();
   let hermesBinary = '';
   let dashboardPort = 0;
+  let dashboardToken: string | null = null;
 
   if (found.kind === 'found') {
     const versionCheck = await verifyHermesVersion(found.path);
@@ -54,6 +55,7 @@ void app.whenReady().then(async () => {
       const dashboard = await ensureDashboard({ binaryPath: found.path, hermesHome });
       if (dashboard.kind === 'ready') {
         dashboardPort = dashboard.port;
+        dashboardToken = await fetchDashboardToken(dashboard.port);
       }
     }
   }
@@ -62,6 +64,7 @@ void app.whenReady().then(async () => {
     {
       hermesBinary,
       dashboardPort,
+      dashboardToken,
       defaultHermesHome: process.env['HERMES_HOME'] ?? join(homedir(), '.hermes'),
       activeHermesHome: process.env['HERMES_HOME'] ?? join(homedir(), '.hermes'),
       win: () => win,
