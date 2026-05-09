@@ -14,7 +14,9 @@
     "lint": "eslint src --ext .ts,.tsx",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json"
   },
-  "hermes": { "minVersion": "0.13.0" },
+  "hermes": {
+    "minVersion": "0.13.0"
+  },
   "dependencies": {
     "@tanstack/react-query": "^5.59.0",
     "electron-log": "^5.2.0",
@@ -28,6 +30,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.48.0",
+    "@tailwindcss/postcss": "^4.3.0",
     "@testing-library/react": "^16.0.1",
     "@types/node": "^20.16.0",
     "@types/react": "^19.0.0",
