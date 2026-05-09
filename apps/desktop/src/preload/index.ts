@@ -7,6 +7,7 @@ const api = {
   runtime: {
     status: (): Promise<StatusSnapshot> => ipcRenderer.invoke(IpcChannel.RuntimeStatus),
     rescan: (): Promise<StatusSnapshot> => ipcRenderer.invoke(IpcChannel.RuntimeRescan),
+    probe: () => ipcRenderer.invoke(IpcChannel.RuntimeProbe),
   },
   profile: {
     list: (): Promise<ProfileSummary[]> => ipcRenderer.invoke(IpcChannel.ProfileList),

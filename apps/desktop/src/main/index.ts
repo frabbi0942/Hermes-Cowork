@@ -43,44 +43,36 @@ const supervisor = new AcpSupervisor();
 
 void app.whenReady().then(async () => {
   const found = findHermesBinary();
-  if (found.kind === 'not-found') {
-    console.error('hermes binary not found. Searched:', found.searched);
-    // M1: surface in renderer via a dedicated NotFound page in a later task.
-    app.quit();
-    return;
-  }
+  let hermesBinary = '';
+  let dashboardPort = 0;
 
-  const versionCheck = await verifyHermesVersion(found.path);
-  if (versionCheck.kind !== 'ok') {
-    console.error('hermes version probe failed', versionCheck);
-    app.quit();
-    return;
-  }
-
-  const hermesHome = process.env['HERMES_HOME'] ?? join(homedir(), '.hermes');
-  const dashboard = await ensureDashboard({
-    binaryPath: found.path,
-    hermesHome,
-  });
-  if (dashboard.kind !== 'ready') {
-    console.error('dashboard failed to start', dashboard);
-    app.quit();
-    return;
+  if (found.kind === 'found') {
+    const versionCheck = await verifyHermesVersion(found.path);
+    if (versionCheck.kind === 'ok') {
+      hermesBinary = found.path;
+      const hermesHome = process.env['HERMES_HOME'] ?? join(homedir(), '.hermes');
+      const dashboard = await ensureDashboard({ binaryPath: found.path, hermesHome });
+      if (dashboard.kind === 'ready') {
+        dashboardPort = dashboard.port;
+      }
+    }
   }
 
   registerIpcHandlers(
     {
-      hermesBinary: found.path,
-      dashboardPort: dashboard.port,
-      defaultHermesHome: hermesHome,
-      activeHermesHome: hermesHome,
+      hermesBinary,
+      dashboardPort,
+      defaultHermesHome: process.env['HERMES_HOME'] ?? join(homedir(), '.hermes'),
+      activeHermesHome: process.env['HERMES_HOME'] ?? join(homedir(), '.hermes'),
       win: () => win,
     },
     supervisor,
   );
 
-  pump = new KanbanWsPump({ port: dashboard.port, win: () => win });
-  await pump.start();
+  if (dashboardPort > 0) {
+    pump = new KanbanWsPump({ port: dashboardPort, win: () => win });
+    await pump.start();
+  }
 
   createWindow();
 });

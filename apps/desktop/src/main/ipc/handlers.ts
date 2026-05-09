@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { IpcChannel } from './channels';
 import { AcpSupervisor, type AcpEvent } from '../orchestrator/acp-supervisor';
 import type { ProfileSummary, StatusSnapshot, AcpClientMessage } from '../../shared/types';
+import { findHermesBinary, verifyHermesVersion, MIN_HERMES_VERSION } from '../orchestrator/hermes-runtime';
 
 type Context = {
   hermesBinary: string;
@@ -15,6 +16,16 @@ type Context = {
 
 export function registerIpcHandlers(ctx: Context, sup: AcpSupervisor): void {
   // ── runtime ──
+  ipcMain.handle(IpcChannel.RuntimeProbe, async () => {
+    const found = findHermesBinary();
+    if (found.kind === 'not-found') return { kind: 'not-found' as const, searched: found.searched };
+    const v = await verifyHermesVersion(found.path);
+    if (v.kind === 'too-old') return { kind: 'too-old' as const, version: v.version, min: v.min };
+    if (v.kind === 'version-failed') return { kind: 'version-failed' as const, stderr: v.stderr };
+    if (v.kind !== 'ok') return { kind: 'not-found' as const, searched: [] };
+    return { kind: 'ok' as const, path: found.path, version: v.version, min: MIN_HERMES_VERSION };
+  });
+
   ipcMain.handle(IpcChannel.RuntimeStatus, async (): Promise<StatusSnapshot> => {
     const r = await fetch(`http://127.0.0.1:${ctx.dashboardPort}/api/status`);
     const body = (await r.json()) as { version: string; gateway?: { running?: boolean; platforms?: string[] } };

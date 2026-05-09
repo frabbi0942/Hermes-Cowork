@@ -2,6 +2,7 @@ export const IpcChannel = {
   // status / runtime
   RuntimeStatus: 'runtime:status',
   RuntimeRescan: 'runtime:rescan',
+  RuntimeProbe: 'runtime:probe',
 
   // profiles
   ProfileList: 'profile:list',
