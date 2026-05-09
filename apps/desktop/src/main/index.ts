@@ -5,8 +5,10 @@ import { findHermesBinary, verifyHermesVersion } from './orchestrator/hermes-run
 import { ensureDashboard } from './orchestrator/dashboard';
 import { AcpSupervisor } from './orchestrator/acp-supervisor';
 import { registerIpcHandlers } from './ipc/handlers';
+import { KanbanWsPump } from './orchestrator/kanban-ws';
 
 let win: BrowserWindow | null = null;
+let pump: KanbanWsPump | null = null;
 
 function createWindow() {
   win = new BrowserWindow({
@@ -77,6 +79,9 @@ void app.whenReady().then(async () => {
     supervisor,
   );
 
+  pump = new KanbanWsPump({ port: dashboard.port, win: () => win });
+  await pump.start();
+
   createWindow();
 });
 
@@ -86,6 +91,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
+  pump?.stop();
   supervisor.shutdownAll();
 });
 

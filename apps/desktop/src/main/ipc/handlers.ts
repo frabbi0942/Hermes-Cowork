@@ -110,6 +110,9 @@ export function registerIpcHandlers(ctx: Context, sup: AcpSupervisor): void {
     return r.json().catch(() => null);
   });
 
+  // ── kanban WS ──
+  ipcMain.handle(IpcChannel.KanbanWsSubscribe, (_e, _boardSlug: string | null) => undefined);
+
   // ── dialog ──
   ipcMain.handle(IpcChannel.ShowFolderPicker, async () => {
     const w = ctx.win();
