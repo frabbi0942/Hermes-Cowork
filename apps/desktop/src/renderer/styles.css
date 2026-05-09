@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 
+/* canonical theme — keep tokens.ts in sync */
 @theme {
   --color-bg: #0F1418;
   --color-surface: #13171B;
@@ -13,6 +14,11 @@
   --color-warn: #FFB87A;
   --color-danger: #F87171;
   --font-sans: 'Inter', -apple-system, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
 }
 
 html, body, #root { height: 100%; }
