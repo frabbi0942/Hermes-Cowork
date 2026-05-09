@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { GoalHeader } from './GoalHeader';
 import { Transcript } from './Transcript';
 import { Composer as ChatComposer } from '../chat/Composer';  // reuse for steering
+import { RightPane } from './RightPane';
 import { useCoworkStore } from './cowork.store';
 
 // KNOWN M1 LIMITATION: ChatComposer reads sessionId from useChatStore (the chat store),
@@ -25,7 +26,7 @@ export function CoworkPage() {
         <Transcript />
         <ChatComposer />
       </div>
-      {/* RightPane added in Task 29 */}
+      <RightPane />
     </div>
   );
 }
