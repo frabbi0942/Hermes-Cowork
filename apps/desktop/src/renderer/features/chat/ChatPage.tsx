@@ -10,13 +10,21 @@ export function ChatPage() {
 
   useEffect(() => {
     let cancelled = false;
+    let spawnedSessionId: string | null = null;
+
     const init = async () => {
       const { sessionId } = await window.hermes.acp.start({
         profile: 'default',
         // cwd: '/' is a placeholder — Task 26 adds a folder picker
         cwd: '/',
       });
-      if (cancelled) return;
+      spawnedSessionId = sessionId;
+      // StrictMode double-mount: shutdown the orphaned child if we were
+      // unmounted before the spawn returned.
+      if (cancelled) {
+        void window.hermes.acp.stop(sessionId);
+        return;
+      }
       startSession(sessionId);
     };
     void init();
@@ -26,6 +34,7 @@ export function ChatPage() {
     return () => {
       cancelled = true;
       off();
+      if (spawnedSessionId) void window.hermes.acp.stop(spawnedSessionId);
     };
   }, [startSession, ingest]);
 
